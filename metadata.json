@@ -1,0 +1,6 @@
+{
+  "name": "Hilal Sezer Öğretmenin Bilişim Portalı",
+  "description": "K-6 seviyesinde öğrenciler için interaktif Bilişim Teknolojileri ders notları, kaynaklar, kodlama etkinlikleri ve yarışmalar portalı.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

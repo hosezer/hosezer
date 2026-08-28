@@ -4,12 +4,13 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { PageId, GradeLevel, LessonNote, LearningModule, Competition, StudentProfile } from './types';
+import { PageId, GradeLevel, LessonNote, LearningModule, Competition, StudentProfile, AuthUser } from './types';
 import { INITIAL_STUDENT_PROFILE, LESSON_NOTES } from './data/portalData';
 import { Sidebar } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { MobileNav } from './components/MobileNav';
 import { LoginScreen } from './components/LoginScreen';
+import { logStudentActivity } from './lib/supabase';
 
 // Modals
 import { LessonReaderModal } from './components/modals/LessonReaderModal';
@@ -25,13 +26,48 @@ import { ResourcesView } from './components/views/ResourcesView';
 import { CompetitionsView } from './components/views/CompetitionsView';
 import { ActivitiesView } from './components/views/ActivitiesView';
 import { AboutView } from './components/views/AboutView';
+import { ChatView } from './components/views/ChatView';
+import { TeacherDashboardView } from './components/views/TeacherDashboardView';
 
 export default function App() {
   // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    const localAuth = localStorage.getItem('portal_auth_user');
-    const sessionAuth = sessionStorage.getItem('portal_auth_user');
-    return Boolean(localAuth || sessionAuth);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    try {
+      const localAuth = localStorage.getItem('portal_auth_user');
+      const sessionAuth = sessionStorage.getItem('portal_auth_user');
+      const raw = localAuth || sessionAuth;
+      if (!raw) return null;
+      // If it was just a string username (from previous version)
+      if (raw.startsWith('{')) {
+        return JSON.parse(raw) as AuthUser;
+      } else {
+        // Migration from previous plain username string
+        if (raw.toUpperCase() === 'HSEZER') {
+          return {
+            id: 'teacher-hsezer',
+            username: 'HSEZER',
+            role: 'teacher',
+            name: 'Hilal Sezer',
+            grade: 'Bilişim Teknolojileri Öğretmeni',
+            avatarId: 'robot_teacher',
+            points: 9999,
+            stars: 99,
+          };
+        } else {
+          return {
+            id: `student-${raw}`,
+            username: raw,
+            role: 'student',
+            name: raw,
+            grade: '3-4. Sınıf',
+            points: 150,
+            stars: 6,
+          };
+        }
+      }
+    } catch {
+      return null;
+    }
   });
 
   const [activePage, setActivePage] = useState<PageId>('home');
@@ -54,6 +90,19 @@ export default function App() {
     localStorage.setItem('hilal_sezer_portal_profile', JSON.stringify(profile));
   }, [profile]);
 
+  // Sync profile with logged in student
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'student') {
+      setProfile((prev) => ({
+        ...prev,
+        name: currentUser.name || prev.name,
+        grade: currentUser.grade || prev.grade,
+        schoolNumber: currentUser.schoolNumber || prev.schoolNumber,
+        points: Math.max(prev.points, currentUser.points || 50),
+      }));
+    }
+  }, [currentUser]);
+
   // Modal States
   const [readingNote, setReadingNote] = useState<LessonNote | null>(null);
   const [worksheetNote, setWorksheetNote] = useState<LessonNote | null>(null);
@@ -61,16 +110,31 @@ export default function App() {
   const [activeCompetition, setActiveCompetition] = useState<Competition | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Student reward handlers
-  const handleEarnPoints = (points: number) => {
+  // Student reward handlers with activity logging
+  const handleEarnPoints = async (points: number, activityTitle?: string, activityDesc?: string) => {
     setProfile((prev) => ({
       ...prev,
       points: prev.points + points,
       stars: prev.stars + Math.floor(points / 20)
     }));
+
+    if (currentUser && currentUser.role === 'student') {
+      await logStudentActivity({
+        studentId: currentUser.id,
+        studentUsername: currentUser.username,
+        studentName: currentUser.name,
+        studentGrade: currentUser.grade || 'Öğrenci',
+        activityType: 'game_played',
+        title: activityTitle || 'Kodlama Etkinliğini Tamamladı 🎮',
+        description: activityDesc || `${points} puan başarıyla kazanıldı.`,
+        pointsEarned: points,
+        createdAt: new Date().toISOString(),
+      });
+    }
   };
 
-  const handleCompleteLesson = (noteId: string) => {
+  const handleCompleteLesson = async (noteId: string) => {
+    const matchedNote = LESSON_NOTES.find((n) => n.id === noteId);
     setProfile((prev) => {
       if (prev.completedNotes.includes(noteId)) return prev;
       return {
@@ -80,9 +144,24 @@ export default function App() {
         completedNotes: [...prev.completedNotes, noteId]
       };
     });
+
+    if (currentUser && currentUser.role === 'student') {
+      await logStudentActivity({
+        studentId: currentUser.id,
+        studentUsername: currentUser.username,
+        studentName: currentUser.name,
+        studentGrade: currentUser.grade || 'Öğrenci',
+        activityType: 'quiz_completed',
+        title: `${matchedNote?.title || 'Ders Notu'} Quizini Çözdü 📝`,
+        description: 'Tüm soruları tamamlayarak 50 puan kazandı.',
+        pointsEarned: 50,
+        createdAt: new Date().toISOString(),
+      });
+    }
   };
 
-  const handleJoinCompetition = (compId: string) => {
+  const handleJoinCompetition = async (compId: string) => {
+    const matchedComp = activeCompetition;
     setProfile((prev) => {
       if (prev.joinedCompetitions.includes(compId)) return prev;
       return {
@@ -92,6 +171,20 @@ export default function App() {
         joinedCompetitions: [...prev.joinedCompetitions, compId]
       };
     });
+
+    if (currentUser && currentUser.role === 'student') {
+      await logStudentActivity({
+        studentId: currentUser.id,
+        studentUsername: currentUser.username,
+        studentName: currentUser.name,
+        studentGrade: currentUser.grade || 'Öğrenci',
+        activityType: 'competition_joined',
+        title: `${matchedComp?.title || 'Kodlama Turnuvası'}na Başvurdu 🏆`,
+        description: 'Yarışma kaydı onaylandı ve 100 turnuva puanı verildi.',
+        pointsEarned: 100,
+        createdAt: new Date().toISOString(),
+      });
+    }
   };
 
   const handleUpdateProfile = (name: string, grade: string) => {
@@ -116,11 +209,11 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('portal_auth_user');
     sessionStorage.removeItem('portal_auth_user');
-    setIsAuthenticated(false);
+    setCurrentUser(null);
   };
 
-  if (!isAuthenticated) {
-    return <LoginScreen onLoginSuccess={() => setIsAuthenticated(true)} />;
+  if (!currentUser) {
+    return <LoginScreen onLoginSuccess={(user) => setCurrentUser(user)} />;
   }
 
   return (
@@ -130,6 +223,7 @@ export default function App() {
         activePage={activePage}
         onNavigate={setActivePage}
         onLogout={handleLogout}
+        currentUser={currentUser}
       />
 
       {/* Main Content Area */}
@@ -144,6 +238,7 @@ export default function App() {
           onSelectModule={handleSelectModuleFromSearch}
           onSelectCompetition={(comp) => setActiveCompetition(comp)}
           onLogout={handleLogout}
+          currentUser={currentUser}
         />
 
         {/* Mobile Top Navigation & Bottom Bar */}
@@ -152,6 +247,7 @@ export default function App() {
           onNavigate={setActivePage}
           onOpenProfile={() => setIsProfileOpen(true)}
           onLogout={handleLogout}
+          currentUser={currentUser}
         />
 
         {/* Page Content Container */}
@@ -193,7 +289,18 @@ export default function App() {
           )}
 
           {activePage === 'activities' && (
-            <ActivitiesView onEarnPoints={handleEarnPoints} />
+            <ActivitiesView onEarnPoints={(pts) => handleEarnPoints(pts)} />
+          )}
+
+          {activePage === 'chat' && (
+            <ChatView
+              currentUser={currentUser}
+              onEarnPoints={(pts) => handleEarnPoints(pts)}
+            />
+          )}
+
+          {activePage === 'teacher_panel' && (
+            <TeacherDashboardView onNavigate={setActivePage} />
           )}
 
           {activePage === 'about' && <AboutView />}
@@ -216,7 +323,7 @@ export default function App() {
         <WorksheetModal
           note={worksheetNote}
           onClose={() => setWorksheetNote(null)}
-          onSaveProgress={() => handleEarnPoints(30)}
+          onSaveProgress={() => handleEarnPoints(30, 'Çalışma Tablosunu Doldurdu', 'Etkinlik sorularını başarıyla tamamladı.')}
         />
       )}
 

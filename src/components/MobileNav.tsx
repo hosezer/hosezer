@@ -1,14 +1,23 @@
 import React from 'react';
-import { PageId } from '../types';
+import { PageId, AuthUser } from '../types';
 
 interface Props {
   activePage: PageId;
   onNavigate: (page: PageId) => void;
   onOpenProfile: () => void;
   onLogout?: () => void;
+  currentUser?: AuthUser | null;
 }
 
-export const MobileNav: React.FC<Props> = ({ activePage, onNavigate, onOpenProfile, onLogout }) => {
+export const MobileNav: React.FC<Props> = ({
+  activePage,
+  onNavigate,
+  onOpenProfile,
+  onLogout,
+  currentUser,
+}) => {
+  const isTeacher = currentUser?.role === 'teacher';
+
   return (
     <>
       {/* Mobile Top Nav */}
@@ -42,7 +51,7 @@ export const MobileNav: React.FC<Props> = ({ activePage, onNavigate, onOpenProfi
         <div className="flex justify-around items-center px-2 py-1.5">
           <button
             onClick={() => onNavigate('home')}
-            className={`flex flex-col items-center p-1.5 transition-colors ${
+            className={`flex flex-col items-center p-1 transition-colors ${
               activePage === 'home' ? 'text-[#0058be]' : 'text-slate-500'
             }`}
           >
@@ -53,12 +62,12 @@ export const MobileNav: React.FC<Props> = ({ activePage, onNavigate, onOpenProfi
             >
               home
             </span>
-            <span className="text-[11px] font-bold mt-0.5">Ana Sayfa</span>
+            <span className="text-[10px] font-bold mt-0.5">Ana Sayfa</span>
           </button>
 
           <button
             onClick={() => onNavigate('notes')}
-            className={`flex flex-col items-center p-1.5 transition-colors ${
+            className={`flex flex-col items-center p-1 transition-colors ${
               activePage === 'notes' ? 'text-[#0058be]' : 'text-slate-500'
             }`}
           >
@@ -69,40 +78,74 @@ export const MobileNav: React.FC<Props> = ({ activePage, onNavigate, onOpenProfi
             >
               menu_book
             </span>
-            <span className="text-[11px] font-bold mt-0.5">Notlar</span>
+            <span className="text-[10px] font-bold mt-0.5">Notlar</span>
           </button>
 
           <button
-            onClick={() => onNavigate('resources')}
-            className={`flex flex-col items-center p-1.5 transition-colors ${
-              activePage === 'resources' ? 'text-[#0058be]' : 'text-slate-500'
+            onClick={() => onNavigate('activities')}
+            className={`flex flex-col items-center p-1 transition-colors ${
+              activePage === 'activities' ? 'text-[#0058be]' : 'text-slate-500'
             }`}
           >
             <span
               className={`material-symbols-outlined text-2xl ${
-                activePage === 'resources' ? 'icon-filled' : ''
+                activePage === 'activities' ? 'icon-filled' : ''
               }`}
             >
-              folder_open
+              sports_esports
             </span>
-            <span className="text-[11px] font-bold mt-0.5">Kaynaklar</span>
+            <span className="text-[10px] font-bold mt-0.5">Etkinlik</span>
           </button>
 
           <button
-            onClick={() => onNavigate('competitions')}
-            className={`flex flex-col items-center p-1.5 transition-colors ${
-              activePage === 'competitions' ? 'text-[#0058be]' : 'text-slate-500'
+            onClick={() => onNavigate('chat')}
+            className={`flex flex-col items-center p-1 transition-colors ${
+              activePage === 'chat' ? 'text-[#0058be]' : 'text-slate-500'
             }`}
           >
             <span
               className={`material-symbols-outlined text-2xl ${
-                activePage === 'competitions' ? 'icon-filled' : ''
+                activePage === 'chat' ? 'icon-filled' : ''
               }`}
             >
-              emoji_events
+              chat
             </span>
-            <span className="text-[11px] font-bold mt-0.5">Yarışmalar</span>
+            <span className="text-[10px] font-bold mt-0.5">Mesajlar</span>
           </button>
+
+          {isTeacher ? (
+            <button
+              onClick={() => onNavigate('teacher_panel')}
+              className={`flex flex-col items-center p-1 transition-colors ${
+                activePage === 'teacher_panel' ? 'text-[#0058be]' : 'text-slate-500'
+              }`}
+            >
+              <span
+                className={`material-symbols-outlined text-2xl ${
+                  activePage === 'teacher_panel' ? 'icon-filled' : ''
+                }`}
+              >
+                shield_person
+              </span>
+              <span className="text-[10px] font-bold mt-0.5">Öğretmen</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onNavigate('competitions')}
+              className={`flex flex-col items-center p-1 transition-colors ${
+                activePage === 'competitions' ? 'text-[#0058be]' : 'text-slate-500'
+              }`}
+            >
+              <span
+                className={`material-symbols-outlined text-2xl ${
+                  activePage === 'competitions' ? 'icon-filled' : ''
+                }`}
+              >
+                emoji_events
+              </span>
+              <span className="text-[10px] font-bold mt-0.5">Yarışma</span>
+            </button>
+          )}
         </div>
       </nav>
     </>

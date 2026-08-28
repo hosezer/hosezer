@@ -1,6 +1,61 @@
-export type PageId = 'home' | 'notes' | 'resources' | 'activities' | 'competitions' | 'about';
+export type PageId = 'home' | 'notes' | 'resources' | 'activities' | 'competitions' | 'chat' | 'teacher_panel' | 'about';
 
 export type GradeLevel = 'all' | 'anaokulu' | '1-2' | '3-4' | '5-6' | '1' | '2' | '3' | '4' | '5' | '6';
+
+export type UserRole = 'teacher' | 'student';
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: UserRole;
+  name: string;
+  grade?: string;
+  schoolNumber?: string;
+  avatarId?: string;
+  points?: number;
+  stars?: number;
+  createdAt?: string;
+  lastActiveAt?: string;
+}
+
+export interface RegisteredStudent {
+  id: string;
+  username: string;
+  password?: string;
+  name: string;
+  grade: string;
+  schoolNumber?: string;
+  avatarId: string;
+  points: number;
+  stars: number;
+  createdAt: string;
+  lastActiveAt: string;
+}
+
+export interface StudentActivity {
+  id: string;
+  studentId: string;
+  studentUsername: string;
+  studentName: string;
+  studentGrade: string;
+  activityType: 'login' | 'register' | 'note_read' | 'worksheet_done' | 'game_played' | 'quiz_completed' | 'competition_joined' | 'message_sent';
+  title: string;
+  description: string;
+  pointsEarned: number;
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  studentId: string;
+  studentName?: string;
+  studentUsername?: string;
+  senderRole: 'student' | 'teacher';
+  senderName: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
 
 export interface LessonNote {
   id: string;

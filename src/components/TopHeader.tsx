@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PageId, StudentProfile, LessonNote, LearningModule, Competition } from '../types';
+import { PageId, StudentProfile, LessonNote, LearningModule, Competition, AuthUser } from '../types';
 import { LESSON_NOTES, LEARNING_MODULES, COMPETITIONS } from '../data/portalData';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   onSelectModule: (mod: LearningModule) => void;
   onSelectCompetition: (comp: Competition) => void;
   onLogout?: () => void;
+  currentUser?: AuthUser | null;
 }
 
 export const TopHeader: React.FC<Props> = ({
@@ -21,20 +22,29 @@ export const TopHeader: React.FC<Props> = ({
   onSelectNote,
   onSelectModule,
   onSelectCompetition,
-  onLogout
+  onLogout,
+  currentUser
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const topNavTabs: { id: PageId; label: string }[] = [
+  const isTeacher = currentUser?.role === 'teacher';
+
+  const topNavTabs: { id: PageId; label: string; icon?: string }[] = [
     { id: 'home', label: 'Ana Sayfa' },
     { id: 'notes', label: 'Ders Notları' },
     { id: 'resources', label: 'Kaynaklar' },
     { id: 'activities', label: 'Etkinlikler' },
     { id: 'competitions', label: 'Yarışmalar' },
-    { id: 'about', label: 'Hakkında' }
+    { id: 'chat', label: isTeacher ? 'Mesajlar 💬' : 'Öğretmene Sor 💬' },
   ];
+
+  if (isTeacher) {
+    topNavTabs.push({ id: 'teacher_panel', label: 'Öğretmen Paneli 📊' });
+  }
+
+  topNavTabs.push({ id: 'about', label: 'Hakkında' });
 
   // Search Results
   const matchingNotes = searchQuery.trim()
@@ -83,6 +93,10 @@ export const TopHeader: React.FC<Props> = ({
         return 'Eğlenceli Etkinlikler';
       case 'competitions':
         return 'Kodlama Yarışmaları';
+      case 'chat':
+        return isTeacher ? 'Öğrenci Mesajlaşmaları' : 'Öğretmene Soru Sor';
+      case 'teacher_panel':
+        return 'Öğrenci Hareketleri & Supabase Veritabanı';
       case 'about':
         return 'Öğretmen & Portal Hakkında';
     }
@@ -91,8 +105,8 @@ export const TopHeader: React.FC<Props> = ({
   return (
     <header className="hidden md:flex fixed top-0 left-64 right-0 z-30 bg-white/90 backdrop-blur-md px-6 py-3.5 justify-between items-center border-b border-[#e1e2ec] shadow-xs">
       {/* Left Title & Breadcrumb */}
-      <div className="flex items-center gap-6">
-        <h1 className="text-xl font-extrabold text-[#0058be] tracking-tight">
+      <div className="flex items-center gap-4">
+        <h1 className="text-lg font-extrabold text-[#0058be] tracking-tight">
           {getPageTitle(activePage)}
         </h1>
 
@@ -104,7 +118,7 @@ export const TopHeader: React.FC<Props> = ({
               <button
                 key={tab.id}
                 onClick={() => onNavigate(tab.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[#2170e4] text-white shadow-xs'
                     : 'text-[#424754] hover:text-[#0058be] hover:bg-white/80'
@@ -118,7 +132,7 @@ export const TopHeader: React.FC<Props> = ({
       </div>
 
       {/* Right Controls: Search, Points & Profile */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* Search Bar with Dropdown */}
         <div className="relative" ref={searchRef}>
           <div className="relative">
@@ -130,16 +144,16 @@ export const TopHeader: React.FC<Props> = ({
                 setIsSearchOpen(true);
               }}
               onFocus={() => setIsSearchOpen(true)}
-              placeholder="Konu, ders veya yarışma ara..."
-              className="bg-[#f2f3fd] border-2 border-[#c2c6d6] rounded-full py-2 pl-10 pr-4 w-64 focus:w-80 focus:border-[#0058be] focus:bg-white focus:outline-none text-xs font-semibold text-[#191b23] transition-all"
+              placeholder="Ders veya konu ara..."
+              className="bg-[#f2f3fd] border-2 border-[#c2c6d6] rounded-full py-1.5 pl-9 pr-4 w-52 focus:w-64 focus:border-[#0058be] focus:bg-white focus:outline-none text-xs font-semibold text-[#191b23] transition-all"
             />
-            <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#424754] text-lg">
+            <span className="material-symbols-outlined absolute left-3 top-2 text-[#424754] text-base">
               search
             </span>
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-2 text-slate-400 hover:text-slate-600"
               >
                 <span className="material-symbols-outlined text-sm">close</span>
               </button>
@@ -148,7 +162,7 @@ export const TopHeader: React.FC<Props> = ({
 
           {/* Live Search Modal Results */}
           {isSearchOpen && searchQuery.trim() && (
-            <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border-2 border-blue-100 p-4 max-h-[80vh] overflow-y-auto z-50 animate-fadeIn">
+            <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border-2 border-blue-100 p-4 max-h-[80vh] overflow-y-auto z-50 animate-fadeIn">
               <div className="text-xs font-bold text-slate-400 uppercase mb-2">Arama Sonuçları</div>
 
               {!hasResults ? (
@@ -246,27 +260,27 @@ export const TopHeader: React.FC<Props> = ({
         {/* Student Points Pill */}
         <button
           onClick={onOpenProfile}
-          className="flex items-center gap-2 bg-[#f2f3fd] hover:bg-[#d8e2ff] border border-[#d8e2ff] px-3.5 py-1.5 rounded-full transition-colors"
+          className="flex items-center gap-1.5 bg-[#f2f3fd] hover:bg-[#d8e2ff] border border-[#d8e2ff] px-3 py-1.5 rounded-full transition-colors cursor-pointer"
         >
           <span className="material-symbols-outlined text-[#fea619] text-base icon-filled">bolt</span>
-          <span className="text-xs font-extrabold text-[#0058be]">{profile.points} Puan</span>
+          <span className="text-xs font-extrabold text-[#0058be]">{profile.points} P</span>
         </button>
 
-        {/* Profile Avatar Button */}
+        {/* Profile Button */}
         <button
           onClick={onOpenProfile}
-          className="flex items-center gap-2 p-1.5 rounded-full hover:bg-[#f2f3fd] transition-colors border border-transparent hover:border-[#d8e2ff]"
-          title="Öğrenci Profili"
+          className="flex items-center gap-1.5 p-1 rounded-full hover:bg-[#f2f3fd] transition-colors border border-transparent hover:border-[#d8e2ff] cursor-pointer"
+          title="Kullanıcı Profili"
         >
-          <span className="material-symbols-outlined text-[#0058be] text-3xl">account_circle</span>
+          <span className="material-symbols-outlined text-[#0058be] text-2xl">account_circle</span>
         </button>
 
         {/* Logout Button */}
         {onLogout && (
           <button
             onClick={onLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold text-xs transition-colors border border-slate-200"
-            title="Güvenli Çıkış Yap"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold text-xs transition-colors border border-slate-200 cursor-pointer"
+            title="Çıkış Yap"
           >
             <span className="material-symbols-outlined text-base">logout</span>
             <span className="hidden xl:inline">Çıkış</span>
